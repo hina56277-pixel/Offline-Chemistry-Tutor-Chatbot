@@ -1,0 +1,1808 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ElementaX - Offline Chemistry Learning Suite</title>
+  <style>
+    :root {
+      --bg: #f6f9fc;
+      --bg-2: #edf4fb;
+      --panel: rgba(255, 255, 255, .74);
+      --panel-strong: rgba(255, 255, 255, .94);
+      --line: rgba(30, 64, 120, .14);
+      --line-bright: rgba(14, 165, 233, .42);
+      --ink: #0f172a;
+      --muted: #526179;
+      --dim: #7a879b;
+      --cyan: #0891b2;
+      --blue: #2563eb;
+      --green: #059669;
+      --yellow: #ca8a04;
+      --orange: #ea580c;
+      --pink: #db2777;
+      --violet: #7c3aed;
+      --red: #e11d48;
+      --shadow: 0 28px 80px rgba(15, 23, 42, .12);
+      --radius: 8px;
+      --mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { color-scheme: light; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, #ffffff 0%, #f6fbff 42%, #eef6f7 100%),
+        repeating-linear-gradient(135deg, rgba(8, 145, 178, .06) 0 1px, transparent 1px 18px);
+      font-family: var(--sans);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .52;
+      background-image:
+        linear-gradient(rgba(30, 64, 120, .08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(30, 64, 120, .08) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: radial-gradient(circle at center, black, transparent 78%);
+    }
+
+    body::after {
+      content: "C6H6   SN1   pH = -log[H+]   PV = nRT   [Co(NH3)6]3+   Ksp   NMR";
+      position: fixed;
+      right: 20px;
+      bottom: 16px;
+      left: 310px;
+      color: rgba(8, 145, 178, .14);
+      font: 700 22px var(--mono);
+      word-spacing: 26px;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .app {
+      display: grid;
+      grid-template-columns: 292px minmax(0, 1fr);
+      gap: 18px;
+      min-height: 100vh;
+      padding: 18px;
+    }
+
+    .glass {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 18px;
+      height: calc(100vh - 36px);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow: auto;
+    }
+
+    .brand {
+      display: grid;
+      grid-template-columns: 54px 1fr;
+      gap: 12px;
+      align-items: center;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .mark {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      border-radius: var(--radius);
+      background:
+        linear-gradient(135deg, rgba(14, 165, 233, .16), rgba(124, 58, 237, .12)),
+        rgba(255, 255, 255, .9);
+      border: 1px solid rgba(14, 165, 233, .35);
+      color: var(--cyan);
+      box-shadow: 0 0 28px rgba(34, 211, 238, .18);
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 4px; font-size: 22px; letter-spacing: .01em; }
+    h2 { margin-bottom: 8px; font-size: clamp(25px, 3vw, 40px); line-height: 1.05; }
+    h3 { margin-bottom: 8px; font-size: 17px; }
+    p { color: var(--muted); line-height: 1.55; }
+    .mono { font-family: var(--mono); }
+    .accent { color: var(--cyan); }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav button, .category-card, .action, .quiz-option, .pill, .tool {
+      border: 1px solid transparent;
+      border-radius: var(--radius);
+      color: var(--ink);
+      transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease;
+    }
+
+    .nav button {
+      min-height: 46px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: transparent;
+      color: #334155;
+      text-align: left;
+      font-weight: 720;
+    }
+
+    .nav button:hover, .nav button.active {
+      background: linear-gradient(135deg, rgba(14, 165, 233, .13), rgba(124, 58, 237, .10));
+      border-color: var(--line-bright);
+      box-shadow: 0 0 26px rgba(34, 211, 238, .10);
+      transform: translateY(-1px);
+    }
+
+    .nav-icon {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, .82);
+      border: 1px solid var(--line);
+      color: var(--cyan);
+      font: 800 13px var(--mono);
+    }
+
+    .side-stat {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-top: auto;
+    }
+
+    .stat {
+      padding: 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .62);
+    }
+
+    .stat strong {
+      display: block;
+      color: var(--ink);
+      font: 850 22px var(--mono);
+    }
+
+    .stat span { color: var(--muted); font-size: 12px; }
+
+    .main {
+      min-width: 0;
+      display: grid;
+      gap: 18px;
+    }
+
+    .topbar {
+      min-height: 92px;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+    }
+
+    .topbar p { margin-bottom: 0; }
+
+    .search-wrap {
+      display: grid;
+      grid-template-columns: minmax(220px, 420px) 164px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .search, .select {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      outline: 0;
+      padding: 0 13px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .82);
+    }
+
+    .search:focus, .select:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 3px rgba(34, 211, 238, .12);
+    }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(320px, .65fr);
+      gap: 18px;
+    }
+
+    .hero, .panel {
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "C   N   O   Fe   Cu   Ag   Pt";
+      position: absolute;
+      right: 18px;
+      top: 16px;
+      color: rgba(8, 145, 178, .14);
+      font: 900 42px var(--mono);
+      letter-spacing: 10px;
+      writing-mode: vertical-rl;
+      pointer-events: none;
+    }
+
+    .badge-row, .toolbar, .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      align-items: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 32px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      color: #075985;
+      background: rgba(14, 165, 233, .10);
+      border: 1px solid rgba(14, 165, 233, .24);
+      font-size: 13px;
+      font-weight: 740;
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .category-card {
+      min-height: 160px;
+      padding: 15px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.02)),
+        rgba(255, 255, 255, .76);
+      border-color: var(--line);
+      text-align: left;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .category-card:hover, .category-card.active {
+      transform: translateY(-2px);
+      border-color: var(--cat);
+      box-shadow: 0 0 34px color-mix(in srgb, var(--cat) 24%, transparent);
+    }
+
+    .category-card::before {
+      content: "";
+      position: absolute;
+      inset: auto 0 0 0;
+      height: 5px;
+      background: linear-gradient(90deg, var(--cat), transparent);
+    }
+
+    .category-card .code {
+      color: var(--cat);
+      font: 900 30px var(--mono);
+    }
+
+    .category-card h3 { margin: 18px 0 7px; }
+    .category-card p { margin: 0; font-size: 13px; }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .metric {
+      padding: 15px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .62);
+    }
+
+    .metric strong {
+      display: block;
+      margin-bottom: 6px;
+      font: 900 26px var(--mono);
+      color: var(--ink);
+    }
+
+    .metric span { color: var(--muted); font-size: 13px; }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 18px;
+    }
+
+    .topic-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .topic-card {
+      min-height: 170px;
+      padding: 15px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .72);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .topic-card:hover {
+      border-color: color-mix(in srgb, var(--topic-color) 70%, var(--line));
+      box-shadow: 0 0 28px color-mix(in srgb, var(--topic-color) 18%, transparent);
+    }
+
+    .topic-card::after {
+      content: "";
+      position: absolute;
+      right: -34px;
+      top: -34px;
+      width: 92px;
+      height: 92px;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--topic-color) 15%, transparent);
+    }
+
+    .topic-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px;
+      color: var(--muted);
+      font: 700 12px var(--mono);
+      position: relative;
+      z-index: 1;
+    }
+
+    .level {
+      color: var(--topic-color);
+      border: 1px solid color-mix(in srgb, var(--topic-color) 45%, transparent);
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: color-mix(in srgb, var(--topic-color) 10%, transparent);
+    }
+
+    .topic-card h3, .topic-card p { position: relative; z-index: 1; }
+    .topic-card h3 { margin-bottom: 8px; }
+    .topic-card p { margin-bottom: 13px; font-size: 13px; }
+
+    .action {
+      min-height: 36px;
+      padding: 8px 10px;
+      background: rgba(255, 255, 255, .74);
+      border-color: var(--line);
+      color: #075985;
+      font-weight: 780;
+    }
+
+    .action.primary {
+      background: linear-gradient(135deg, rgba(34, 211, 238, .92), rgba(59, 130, 246, .85));
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 0 28px rgba(34, 211, 238, .18);
+    }
+
+    .action:hover, .quiz-option:hover, .pill:hover, .tool:hover {
+      transform: translateY(-1px);
+      border-color: var(--cyan);
+    }
+
+    .intel-list {
+      display: grid;
+      gap: 10px;
+      margin: 14px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .intel-list li {
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 10px;
+      align-items: start;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .58);
+    }
+
+    .dot {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 7px;
+      color: #ffffff;
+      background: var(--cyan);
+      font: 900 14px var(--mono);
+    }
+
+    .deep-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 390px;
+      gap: 18px;
+    }
+
+    .viewer {
+      min-height: 520px;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(34, 211, 238, .10), transparent 46%),
+        rgba(255, 255, 255, .54);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .structure-svg {
+      width: min(680px, 96%);
+      height: auto;
+    }
+
+    .bond {
+      stroke: #cbd5e1;
+      stroke-width: 4;
+      stroke-linecap: round;
+      filter: drop-shadow(0 0 6px rgba(34, 211, 238, .28));
+    }
+
+    .bond.hot { stroke: var(--cyan); }
+    .atom circle {
+      stroke-width: 2;
+      filter: drop-shadow(0 0 12px currentColor);
+    }
+    .atom text { fill: #020617; font: 900 15px var(--mono); dominant-baseline: middle; text-anchor: middle; }
+
+    .mechanism {
+      display: grid;
+      gap: 11px;
+      margin-top: 12px;
+    }
+
+    .step {
+      padding: 12px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .70);
+    }
+
+    .step strong { color: var(--cyan); }
+    .step p { margin: 4px 0 0; font-size: 13px; }
+
+    .quiz-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 18px;
+    }
+
+    .quiz-question {
+      min-height: 166px;
+      padding: 18px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line-bright);
+      background: linear-gradient(135deg, rgba(34, 211, 238, .10), rgba(167, 139, 250, .08));
+    }
+
+    .quiz-question h3 {
+      font-size: clamp(20px, 2.6vw, 30px);
+      line-height: 1.24;
+    }
+
+    .quiz-options {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .quiz-option {
+      min-height: 54px;
+      padding: 13px 14px;
+      background: rgba(255, 255, 255, .86);
+      border-color: var(--line);
+      text-align: left;
+      color: var(--ink);
+      font-weight: 720;
+    }
+
+    .quiz-option.correct {
+      border-color: var(--green);
+      background: rgba(16, 185, 129, .16);
+    }
+
+    .quiz-option.wrong {
+      border-color: var(--red);
+      background: rgba(244, 63, 94, .14);
+    }
+
+    .progress {
+      height: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(30, 64, 120, .12);
+    }
+
+    .progress span {
+      display: block;
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), var(--cyan), var(--violet));
+      transition: width .25s ease;
+    }
+
+    .pill {
+      min-height: 36px;
+      padding: 7px 11px;
+      background: rgba(255, 255, 255, .72);
+      border-color: var(--line);
+      color: #334155;
+      font-weight: 760;
+    }
+
+    .pill.active {
+      color: #ffffff;
+      background: var(--cyan);
+      border-color: transparent;
+    }
+
+    .formula-board {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .formula-card {
+      padding: 15px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .72);
+    }
+
+    .formula-card code {
+      display: block;
+      margin: 10px 0;
+      color: var(--yellow);
+      font: 900 18px var(--mono);
+    }
+
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+    }
+
+    .tool {
+      min-height: 92px;
+      padding: 14px;
+      text-align: left;
+      background: rgba(255, 255, 255, .72);
+      border-color: var(--line);
+    }
+
+    .tool strong { display: block; margin-bottom: 6px; }
+    .tool span { color: var(--muted); font-size: 13px; }
+
+    .result {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .72);
+      white-space: pre-wrap;
+      color: #0f172a;
+      font-family: var(--mono);
+      overflow: auto;
+    }
+
+    .chat-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 18px;
+    }
+
+    .chat-window {
+      min-height: 590px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      overflow: hidden;
+    }
+
+    .messages {
+      min-height: 0;
+      overflow: auto;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background:
+        radial-gradient(circle at 88% 14%, rgba(14, 165, 233, .12), transparent 24%),
+        radial-gradient(circle at 18% 84%, rgba(124, 58, 237, .10), transparent 28%),
+        rgba(255, 255, 255, .42);
+    }
+
+    .chat-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .chat-row.user { justify-content: flex-end; }
+
+    .chat-avatar {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 38px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--cyan), var(--violet));
+      font: 900 12px var(--mono);
+      box-shadow: 0 10px 24px rgba(14, 165, 233, .18);
+    }
+
+    .chat-bubble {
+      max-width: min(720px, 82%);
+      padding: 13px 15px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .86);
+      box-shadow: 0 12px 32px rgba(15, 23, 42, .08);
+      line-height: 1.52;
+    }
+
+    .chat-row.user .chat-bubble {
+      color: #fff;
+      background: linear-gradient(135deg, var(--blue), var(--cyan));
+      border-color: transparent;
+    }
+
+    .chat-bubble h3 {
+      margin-bottom: 6px;
+      color: var(--cyan);
+    }
+
+    .chat-bubble ul { margin: 8px 0 0; padding-left: 18px; }
+    .chat-bubble li { margin: 4px 0; }
+
+    .composer {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      padding: 14px;
+      border-top: 1px solid var(--line);
+      background: rgba(255, 255, 255, .76);
+    }
+
+    .composer input {
+      min-height: 48px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 0 13px;
+      outline: 0;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .9);
+    }
+
+    .quick-prompts {
+      display: grid;
+      gap: 9px;
+      margin-top: 14px;
+    }
+
+    .prompt-btn {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .72);
+      color: #334155;
+      text-align: left;
+      padding: 9px 11px;
+      font-weight: 720;
+    }
+
+    .prompt-btn:hover {
+      border-color: var(--cyan);
+      transform: translateY(-1px);
+    }
+
+    .lab-rail {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(120px, 1fr));
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    .lab-tile {
+      min-height: 88px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, .68);
+    }
+
+    .lab-tile strong {
+      display: block;
+      color: var(--ink);
+      font: 900 20px var(--mono);
+    }
+
+    .lab-tile span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .mini-bars {
+      display: grid;
+      gap: 7px;
+      margin-top: 14px;
+    }
+
+    .mini-bars span {
+      display: block;
+      height: 9px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--bar), rgba(255, 255, 255, .25));
+      width: var(--w);
+    }
+
+    .formula-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 12px;
+    }
+
+    .load-more {
+      width: 100%;
+      margin-top: 14px;
+    }
+
+    .tool.active {
+      border-color: var(--cyan);
+      background: linear-gradient(135deg, rgba(14, 165, 233, .12), rgba(52, 211, 153, .10));
+    }
+
+    .topic-card mark {
+      background: rgba(250, 204, 21, .28);
+      color: inherit;
+      padding: 0 2px;
+      border-radius: 3px;
+    }
+
+    @media (max-width: 1260px) {
+      .dashboard { grid-template-columns: repeat(3, minmax(180px, 1fr)); }
+      .hero-grid, .content-grid, .deep-grid, .quiz-layout, .chat-layout { grid-template-columns: 1fr; }
+      .sidebar { position: static; height: auto; }
+      .app { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      .app { padding: 10px; }
+      .topbar, .search-wrap { grid-template-columns: 1fr; }
+      .dashboard, .metric-grid { grid-template-columns: 1fr; }
+      .viewer { min-height: 360px; }
+      body::after { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <aside class="sidebar glass">
+      <section class="brand">
+        <div class="mark" aria-hidden="true">
+          <svg width="38" height="38" viewBox="0 0 48 48" fill="none">
+            <path d="M19 5h10M21 5v15L9 40c-1 2 0 4 3 4h24c3 0 4-2 3-4L27 20V5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M15 34h18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+            <circle cx="20" cy="37" r="1.8" fill="currentColor"/><circle cx="28" cy="39" r="2.2" fill="currentColor"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Elementa<span class="accent">X</span></h1>
+          <p>BS Chemistry Suite</p>
+        </div>
+      </section>
+
+      <nav class="nav" aria-label="Primary">
+        <button class="active" data-screen="dashboard"><span class="nav-icon">DX</span> Navigation Dashboard</button>
+        <button data-screen="chat"><span class="nav-icon">AI</span> Tutor Chatbot</button>
+        <button data-screen="topics"><span class="nav-icon">1K</span> Topic Atlas</button>
+        <button data-screen="deep"><span class="nav-icon">3D</span> Deep-Dive Mode</button>
+        <button data-screen="quiz"><span class="nav-icon">XP</span> Gamified Quiz</button>
+        <button data-screen="formulas"><span class="nav-icon">Fx</span> Numerical Formulas</button>
+        <button data-screen="tools"><span class="nav-icon">Lab</span> Offline Tools</button>
+      </nav>
+
+      <div class="side-stat">
+        <div class="stat"><strong id="sideTopicCount">0</strong><span>Topics</span></div>
+        <div class="stat"><strong id="sideScore">0</strong><span>Score</span></div>
+        <div class="stat"><strong id="sideStreak">0</strong><span>Streak</span></div>
+        <div class="stat"><strong id="sideTime">00:00</strong><span>Quiz Time</span></div>
+      </div>
+    </aside>
+
+    <section class="main">
+      <header class="topbar glass">
+        <div>
+          <div class="badge-row">
+            <span class="badge">Offline Engine</span>
+            <span class="badge">Indexed Search</span>
+            <span class="badge">BS Level</span>
+          </div>
+          <h2 id="screenTitle">Professional Chemistry Learning Suite</h2>
+          <p>Client-side topic atlas, reaction mechanism viewer, formula engine, and adaptive quiz algorithms.</p>
+        </div>
+        <div class="search-wrap">
+          <input id="globalSearch" class="search" type="search" placeholder="Search all topics, mechanisms, formulas..." autocomplete="off" />
+          <select id="globalCategory" class="select" aria-label="Category">
+            <option value="All">All Domains</option>
+            <option value="Organic">Organic</option>
+            <option value="Inorganic">Inorganic</option>
+            <option value="Physical">Physical</option>
+            <option value="Analytical">Analytical</option>
+            <option value="Formulas">Formulas</option>
+          </select>
+        </div>
+      </header>
+
+      <section id="dashboard" class="screen active">
+        <div class="hero-grid">
+          <article class="hero glass">
+            <h2>Competition-grade chemistry command center.</h2>
+            <p>Explore a structured 1,000+ item knowledge bank, filter instantly, inspect mechanisms, solve formulas, and train with timed quizzes. Everything runs offline in this single HTML file.</p>
+            <div class="lab-rail" aria-label="Chemistry data snapshot">
+              <div class="lab-tile"><strong>5</strong><span>chemistry domains</span></div>
+              <div class="lab-tile"><strong>30+</strong><span>formula references</span></div>
+              <div class="lab-tile"><strong>8</strong><span>visual deep dives</span></div>
+              <div class="lab-tile"><strong>118</strong><span>element mass table</span></div>
+            </div>
+            <div id="categoryDashboard" class="dashboard"></div>
+            <div class="metric-grid">
+              <div class="metric"><strong id="metricTopics">0</strong><span>Indexed learning objects</span></div>
+              <div class="metric"><strong>118</strong><span>Periodic elements</span></div>
+              <div class="metric"><strong id="metricAccuracy">0%</strong><span>Quiz accuracy</span></div>
+              <div class="metric"><strong id="metricDifficulty">Core</strong><span>Active difficulty</span></div>
+            </div>
+          </article>
+
+          <aside class="panel glass">
+            <h3>Live Study Console</h3>
+            <ul class="intel-list">
+              <li><span class="dot">S</span><div><strong>Search index ready</strong><p id="searchStatus">Waiting for query across all domains.</p></div></li>
+              <li><span class="dot">Q</span><div><strong>Quiz algorithm</strong><p>Difficulty modifies question type, distractor distance, and time target.</p></div></li>
+              <li><span class="dot">D</span><div><strong>Deep-dive viewer</strong><p>Mechanism diagrams and molecular structures are rendered with inline SVG.</p></div></li>
+              <li><span class="dot">F</span><div><strong>Formula engine</strong><p>Molar mass parser supports nested parentheses and all 118 elements.</p></div></li>
+            </ul>
+          </aside>
+        </div>
+      </section>
+
+      <section id="chat" class="screen">
+        <div class="chat-layout">
+          <article class="chat-window glass">
+            <div id="chatMessages" class="messages" aria-live="polite"></div>
+            <form id="chatForm" class="composer">
+              <input id="chatInput" placeholder="Ask: Explain SN2, calculate H2SO4, what is Fe, pH formula..." autocomplete="off" />
+              <button class="action primary" type="submit">Ask Tutor</button>
+            </form>
+          </article>
+          <aside class="panel glass">
+            <h3>Offline Chatbot</h3>
+            <p>This tutor uses the embedded topic atlas, formula parser, periodic table, and mechanism library. No internet or API calls.</p>
+            <div class="quick-prompts">
+              <button class="prompt-btn" data-chat-prompt="Explain SN2 mechanisms">Explain SN2 mechanisms</button>
+              <button class="prompt-btn" data-chat-prompt="Calculate molar mass of Al2(SO4)3">Calculate Al2(SO4)3</button>
+              <button class="prompt-btn" data-chat-prompt="What is atomic number 26?">Atomic number 26</button>
+              <button class="prompt-btn" data-chat-prompt="Tell me about pH weak acid">pH weak acid</button>
+              <button class="prompt-btn" data-chat-prompt="Show benzene aromatic system">Benzene deep dive</button>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="topics" class="screen">
+        <div class="content-grid">
+          <article class="panel glass">
+            <div class="toolbar">
+              <button class="pill active" data-filter="All">All</button>
+              <button class="pill" data-filter="Organic">Organic</button>
+              <button class="pill" data-filter="Inorganic">Inorganic</button>
+              <button class="pill" data-filter="Physical">Physical</button>
+              <button class="pill" data-filter="Analytical">Analytical</button>
+              <button class="pill" data-filter="Formulas">Formulas</button>
+            </div>
+            <div id="topicGrid" class="topic-grid"></div>
+            <button id="loadMoreTopics" class="action load-more">Load More Topics</button>
+          </article>
+          <aside class="panel glass">
+            <h3>Atlas Diagnostics</h3>
+            <ul class="intel-list">
+              <li><span class="dot">#</span><div><strong id="shownCount">0</strong><p>topics currently displayed from the indexed bank.</p></div></li>
+              <li><span class="dot">O</span><div><strong>Organic</strong><p>Mechanisms, spectroscopy, synthesis, functional groups.</p></div></li>
+              <li><span class="dot">P</span><div><strong>Physical</strong><p>Thermodynamics, kinetics, equilibrium, electrochemistry.</p></div></li>
+              <li><span class="dot">A</span><div><strong>Analytical</strong><p>Titration, chromatography, calibration, error analysis.</p></div></li>
+            </ul>
+          </aside>
+        </div>
+      </section>
+
+      <section id="deep" class="screen">
+        <div class="deep-grid">
+          <article class="panel glass">
+            <div class="toolbar">
+              <select id="deepSelect" class="select" aria-label="Deep dive selection"></select>
+              <button id="animateMechanism" class="action primary">Animate Electron Flow</button>
+            </div>
+            <div id="structureViewer" class="viewer"></div>
+          </article>
+          <aside class="panel glass">
+            <h3 id="deepTitle">Deep-Dive Study Mode</h3>
+            <p id="deepSummary">Select a structure or mechanism to inspect advanced concepts.</p>
+            <div id="mechanismSteps" class="mechanism"></div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="quiz" class="screen">
+        <div class="quiz-layout">
+          <article class="panel glass">
+            <div class="toolbar">
+              <select id="quizDomain" class="select">
+                <option value="All">All Domains</option>
+                <option value="Organic">Organic</option>
+                <option value="Inorganic">Inorganic</option>
+                <option value="Physical">Physical</option>
+                <option value="Analytical">Analytical</option>
+                <option value="Formulas">Formulas</option>
+              </select>
+              <select id="quizDifficulty" class="select">
+                <option value="Core">Core</option>
+                <option value="Advanced">Advanced</option>
+                <option value="Research">Research</option>
+              </select>
+              <button id="newQuestion" class="action primary">New Question</button>
+              <button id="resetQuiz" class="action">Reset Score</button>
+            </div>
+            <div class="quiz-question">
+              <p class="mono accent" id="questionMeta">Ready</p>
+              <h3 id="questionText">Press New Question to begin.</h3>
+            </div>
+            <div id="quizOptions" class="quiz-options"></div>
+          </article>
+          <aside class="panel glass">
+            <h3>Progress Matrix</h3>
+            <div class="metric-grid" style="grid-template-columns:1fr 1fr">
+              <div class="metric"><strong id="quizScore">0</strong><span>Score</span></div>
+              <div class="metric"><strong id="quizAsked">0</strong><span>Answered</span></div>
+              <div class="metric"><strong id="quizStreak">0</strong><span>Streak</span></div>
+              <div class="metric"><strong id="quizTimer">00:00</strong><span>Elapsed</span></div>
+            </div>
+            <p style="margin-top:14px">Completion</p>
+            <div class="progress"><span id="quizProgress"></span></div>
+            <div id="quizFeedback" class="result">Feedback will appear after each answer.</div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="formulas" class="screen">
+        <article class="panel glass">
+          <div class="toolbar">
+            <input id="formulaInput" class="search" placeholder="Molar mass formula: Al2(SO4)3" />
+            <button id="calcMass" class="action primary">Calculate Molar Mass</button>
+          </div>
+          <div class="formula-actions">
+            <button class="pill" data-formula-sample="H2SO4">H2SO4</button>
+            <button class="pill" data-formula-sample="Ca(OH)2">Ca(OH)2</button>
+            <button class="pill" data-formula-sample="Al2(SO4)3">Al2(SO4)3</button>
+            <button class="pill" data-formula-sample="K4[Fe(CN)6]">K4[Fe(CN)6]</button>
+          </div>
+          <div id="formulaResult" class="result">Enter a formula to calculate molar mass offline.</div>
+          <div id="formulaBoard" class="formula-board"></div>
+        </article>
+      </section>
+
+      <section id="tools" class="screen">
+        <article class="panel glass">
+          <h3>Offline Scientific Tools</h3>
+          <div class="tool-grid">
+            <button class="tool" data-tool="molarity"><strong>Molarity Solver</strong><span>M = n / V with unit hints.</span></button>
+            <button class="tool" data-tool="ph"><strong>pH Reference</strong><span>Acid-base equations and approximations.</span></button>
+            <button class="tool" data-tool="gas"><strong>Gas Law Console</strong><span>PV = nRT variable map.</span></button>
+            <button class="tool" data-tool="redox"><strong>Redox Balancer Guide</strong><span>Oxidation number workflow.</span></button>
+            <button class="tool" data-tool="ksp"><strong>Ksp Predictor</strong><span>Solubility and ion-product checks.</span></button>
+            <button class="tool" data-tool="buffer"><strong>Buffer Designer</strong><span>Henderson-Hasselbalch planning.</span></button>
+            <button class="tool" data-tool="chromatography"><strong>Chromatography QA</strong><span>Resolution and retention guidance.</span></button>
+            <button class="tool" data-tool="spectroscopy"><strong>Spectral ID</strong><span>IR, NMR, UV-Vis interpretation cues.</span></button>
+          </div>
+          <div id="toolOutput" class="result">Choose a tool to view its offline workflow.</div>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    "use strict";
+
+    const COLORS = {
+      Organic: "#f472b6",
+      Inorganic: "#38bdf8",
+      Physical: "#a78bfa",
+      Analytical: "#34d399",
+      Formulas: "#facc15"
+    };
+
+    const atomicRows = `1,H,Hydrogen,1.008,Nonmetal;2,He,Helium,4.0026,Noble gas;3,Li,Lithium,6.94,Alkali metal;4,Be,Beryllium,9.0122,Alkaline earth metal;5,B,Boron,10.81,Metalloid;6,C,Carbon,12.011,Nonmetal;7,N,Nitrogen,14.007,Nonmetal;8,O,Oxygen,15.999,Nonmetal;9,F,Fluorine,18.998,Halogen;10,Ne,Neon,20.180,Noble gas;11,Na,Sodium,22.990,Alkali metal;12,Mg,Magnesium,24.305,Alkaline earth metal;13,Al,Aluminium,26.982,Post-transition metal;14,Si,Silicon,28.085,Metalloid;15,P,Phosphorus,30.974,Nonmetal;16,S,Sulfur,32.06,Nonmetal;17,Cl,Chlorine,35.45,Halogen;18,Ar,Argon,39.948,Noble gas;19,K,Potassium,39.098,Alkali metal;20,Ca,Calcium,40.078,Alkaline earth metal;21,Sc,Scandium,44.956,Transition metal;22,Ti,Titanium,47.867,Transition metal;23,V,Vanadium,50.942,Transition metal;24,Cr,Chromium,51.996,Transition metal;25,Mn,Manganese,54.938,Transition metal;26,Fe,Iron,55.845,Transition metal;27,Co,Cobalt,58.933,Transition metal;28,Ni,Nickel,58.693,Transition metal;29,Cu,Copper,63.546,Transition metal;30,Zn,Zinc,65.38,Transition metal;31,Ga,Gallium,69.723,Post-transition metal;32,Ge,Germanium,72.630,Metalloid;33,As,Arsenic,74.922,Metalloid;34,Se,Selenium,78.971,Nonmetal;35,Br,Bromine,79.904,Halogen;36,Kr,Krypton,83.798,Noble gas;37,Rb,Rubidium,85.468,Alkali metal;38,Sr,Strontium,87.62,Alkaline earth metal;39,Y,Yttrium,88.906,Transition metal;40,Zr,Zirconium,91.224,Transition metal;41,Nb,Niobium,92.906,Transition metal;42,Mo,Molybdenum,95.95,Transition metal;43,Tc,Technetium,98,Transition metal;44,Ru,Ruthenium,101.07,Transition metal;45,Rh,Rhodium,102.91,Transition metal;46,Pd,Palladium,106.42,Transition metal;47,Ag,Silver,107.87,Transition metal;48,Cd,Cadmium,112.41,Transition metal;49,In,Indium,114.82,Post-transition metal;50,Sn,Tin,118.71,Post-transition metal;51,Sb,Antimony,121.76,Metalloid;52,Te,Tellurium,127.60,Metalloid;53,I,Iodine,126.90,Halogen;54,Xe,Xenon,131.29,Noble gas;55,Cs,Cesium,132.91,Alkali metal;56,Ba,Barium,137.33,Alkaline earth metal;57,La,Lanthanum,138.91,Lanthanide;58,Ce,Cerium,140.12,Lanthanide;59,Pr,Praseodymium,140.91,Lanthanide;60,Nd,Neodymium,144.24,Lanthanide;61,Pm,Promethium,145,Lanthanide;62,Sm,Samarium,150.36,Lanthanide;63,Eu,Europium,151.96,Lanthanide;64,Gd,Gadolinium,157.25,Lanthanide;65,Tb,Terbium,158.93,Lanthanide;66,Dy,Dysprosium,162.50,Lanthanide;67,Ho,Holmium,164.93,Lanthanide;68,Er,Erbium,167.26,Lanthanide;69,Tm,Thulium,168.93,Lanthanide;70,Yb,Ytterbium,173.05,Lanthanide;71,Lu,Lutetium,174.97,Lanthanide;72,Hf,Hafnium,178.49,Transition metal;73,Ta,Tantalum,180.95,Transition metal;74,W,Tungsten,183.84,Transition metal;75,Re,Rhenium,186.21,Transition metal;76,Os,Osmium,190.23,Transition metal;77,Ir,Iridium,192.22,Transition metal;78,Pt,Platinum,195.08,Transition metal;79,Au,Gold,196.97,Transition metal;80,Hg,Mercury,200.59,Transition metal;81,Tl,Thallium,204.38,Post-transition metal;82,Pb,Lead,207.2,Post-transition metal;83,Bi,Bismuth,208.98,Post-transition metal;84,Po,Polonium,209,Post-transition metal;85,At,Astatine,210,Halogen;86,Rn,Radon,222,Noble gas;87,Fr,Francium,223,Alkali metal;88,Ra,Radium,226,Alkaline earth metal;89,Ac,Actinium,227,Actinide;90,Th,Thorium,232.04,Actinide;91,Pa,Protactinium,231.04,Actinide;92,U,Uranium,238.03,Actinide;93,Np,Neptunium,237,Actinide;94,Pu,Plutonium,244,Actinide;95,Am,Americium,243,Actinide;96,Cm,Curium,247,Actinide;97,Bk,Berkelium,247,Actinide;98,Cf,Californium,251,Actinide;99,Es,Einsteinium,252,Actinide;100,Fm,Fermium,257,Actinide;101,Md,Mendelevium,258,Actinide;102,No,Nobelium,259,Actinide;103,Lr,Lawrencium,266,Actinide;104,Rf,Rutherfordium,267,Transition metal;105,Db,Dubnium,268,Transition metal;106,Sg,Seaborgium,269,Transition metal;107,Bh,Bohrium,270,Transition metal;108,Hs,Hassium,269,Transition metal;109,Mt,Meitnerium,278,Transition metal;110,Ds,Darmstadtium,281,Transition metal;111,Rg,Roentgenium,282,Transition metal;112,Cn,Copernicium,285,Transition metal;113,Nh,Nihonium,286,Post-transition metal;114,Fl,Flerovium,289,Post-transition metal;115,Mc,Moscovium,290,Post-transition metal;116,Lv,Livermorium,293,Post-transition metal;117,Ts,Tennessine,294,Halogen;118,Og,Oganesson,294,Noble gas`;
+
+    const elements = atomicRows.split(";").map(row => {
+      const [number, symbol, name, mass, category] = row.split(",");
+      return { number: +number, symbol, name, mass: +mass, category };
+    });
+    const bySymbol = new Map(elements.map(e => [e.symbol, e]));
+
+    const domainBlueprints = {
+      Organic: {
+        themes: ["alkane conformations", "alkene electrophilic addition", "alkyne acidity", "benzene electrophilic substitution", "SN1 mechanisms", "SN2 mechanisms", "E1 eliminations", "E2 eliminations", "carbonyl addition", "aldol condensation", "esterification", "amide synthesis", "organometallic reagents", "pericyclic reactions", "aromatic directing effects", "NMR interpretation", "IR spectroscopy", "mass spectrometry", "stereochemical assignment", "retrosynthetic analysis", "polymerization", "carbohydrate chemistry", "amino acids", "heterocycles", "Diels-Alder cycloaddition", "Grignard synthesis", "enolate chemistry", "protecting groups", "green organic synthesis", "medicinal structure activity"],
+        skills: ["mechanism", "kinetics", "stereochemistry", "regioselectivity", "thermodynamic control", "spectral evidence", "synthetic route", "limiting reagent", "common pitfalls", "lab safety", "advanced comparison", "exam problem"]
+      },
+      Inorganic: {
+        themes: ["coordination geometry", "crystal field splitting", "ligand field stabilization", "spin states", "organometallic bonding", "18 electron rule", "lanthanide contraction", "actinide chemistry", "oxoacids", "solid state lattices", "defect chemistry", "Born-Haber cycles", "periodic anomalies", "group 13 chemistry", "group 14 chemistry", "group 15 chemistry", "halogen chemistry", "noble gas compounds", "bioinorganic iron", "bioinorganic copper", "qualitative cation analysis", "complex ion equilibria", "magnetic moments", "isomerism in complexes", "HSAB theory", "Jahn-Teller distortion", "metal carbonyls", "nanomaterials", "catalytic cycles", "crystal structures"],
+        skills: ["structure", "bonding model", "reactivity trend", "spectrochemical series", "color origin", "magnetism", "stability constant", "reaction pathway", "industrial context", "laboratory identification", "advanced comparison", "exam problem"]
+      },
+      Physical: {
+        themes: ["first law thermodynamics", "second law thermodynamics", "Gibbs free energy", "phase equilibria", "chemical potential", "ideal gases", "real gases", "colligative properties", "Debye-Huckel theory", "electrochemical cells", "Nernst equation", "Butler-Volmer kinetics", "reaction rate laws", "steady state approximation", "Michaelis-Menten kinetics", "surface adsorption", "BET isotherm", "quantum numbers", "molecular orbital theory", "statistical thermodynamics", "partition functions", "photochemistry", "transport phenomena", "viscosity", "collision theory", "transition state theory", "activity coefficients", "phase rule", "radioactive decay kinetics", "computational chemistry"],
+        skills: ["derivation", "numerical setup", "unit analysis", "graph interpretation", "limiting case", "assumption check", "data fitting", "conceptual trap", "advanced comparison", "exam problem", "lab measurement", "model selection"]
+      },
+      Analytical: {
+        themes: ["acid-base titration", "redox titration", "complexometric titration", "gravimetric analysis", "potentiometry", "conductometry", "UV-Vis spectroscopy", "fluorescence spectroscopy", "atomic absorption", "gas chromatography", "HPLC", "ion chromatography", "calibration curves", "standard addition", "internal standards", "limit of detection", "limit of quantitation", "method validation", "sampling strategy", "uncertainty propagation", "error analysis", "buffer preparation", "indicator selection", "matrix effects", "mass spectrometry quantitation", "electrophoresis", "chemometrics", "sample digestion", "quality control charts", "environmental analysis"],
+        skills: ["instrument principle", "calculation", "method selection", "interference control", "calibration", "quality assurance", "precision", "accuracy", "blank correction", "sample preparation", "advanced comparison", "exam problem"]
+      },
+      Formulas: {
+        themes: ["molarity", "molality", "normality", "mole fraction", "mass percent", "ppm conversion", "empirical formula", "molecular formula", "ideal gas law", "van der Waals equation", "pH strong acid", "pH weak acid", "buffer equation", "Ksp", "common ion effect", "rate law", "integrated rate laws", "Arrhenius equation", "Faraday law", "cell potential", "Gibbs equation", "Clausius-Clapeyron", "Raoult law", "osmotic pressure", "dilution equation", "equilibrium constant", "partition coefficient", "percent yield", "atom economy", "standard deviation"],
+        skills: ["variables", "derivation", "unit conversion", "worked example", "rearrangement", "boundary condition", "exam shortcut", "dimensional check", "common error", "mixed problem", "data interpretation", "calculator workflow"]
+      }
+    };
+
+    const formulaLibrary = [
+      ["Molarity", "M = n / V", "Amount concentration in mol L^-1."],
+      ["Molality", "m = n solute / kg solvent", "Useful for colligative properties."],
+      ["Ideal Gas Law", "PV = nRT", "State equation for ideal gases."],
+      ["van der Waals", "(P + an^2/V^2)(V - nb) = nRT", "Corrects real gas pressure and volume."],
+      ["pH", "pH = -log[H+]", "Hydrogen ion activity approximation."],
+      ["Henderson-Hasselbalch", "pH = pKa + log(A- / HA)", "Buffer equation for weak acid systems."],
+      ["Nernst Equation", "E = E0 - RT/nF ln Q", "Electrode potential under nonstandard conditions."],
+      ["Arrhenius", "k = A exp(-Ea/RT)", "Temperature dependence of rate constant."],
+      ["Gibbs Energy", "Delta G = Delta H - T Delta S", "Thermodynamic spontaneity."],
+      ["Faraday Law", "m = QMr / nF", "Electrolysis mass relationship."],
+      ["Osmotic Pressure", "Pi = iMRT", "Pressure from solute particles."],
+      ["Beer-Lambert Law", "A = epsilon b c", "Absorbance-concentration relation."],
+      ["Dilution Equation", "M1V1 = M2V2", "Stock-to-working solution planning."],
+      ["Solubility Product", "Ksp = product of ion activities", "Saturation and precipitation prediction."],
+      ["Common Ion Effect", "Qsp vs Ksp", "Predicts precipitation after ion addition."],
+      ["Integrated First Order", "ln[A]t = ln[A]0 - kt", "Linear kinetic treatment for first-order reactions."],
+      ["Integrated Second Order", "1/[A]t = 1/[A]0 + kt", "Linear kinetic treatment for second-order reactions."],
+      ["Half-Life First Order", "t1/2 = 0.693/k", "Concentration-independent half-life."],
+      ["Clausius-Clapeyron", "ln(P2/P1) = -DeltaHvap/R(1/T2 - 1/T1)", "Vapor pressure-temperature relation."],
+      ["Raoult Law", "Psolution = Xsolvent P0solvent", "Ideal solution vapor pressure."],
+      ["Partition Coefficient", "K = Corganic / Caqueous", "Distribution between immiscible phases."],
+      ["Resolution", "Rs = 2(tR2 - tR1)/(w1 + w2)", "Chromatographic peak separation."],
+      ["LOD", "LOD = 3 sigma / slope", "Detection limit from calibration noise."],
+      ["Percent Yield", "% yield = actual / theoretical x 100", "Reaction efficiency."],
+      ["Atom Economy", "% atom economy = desired product mass / reactant mass x 100", "Green chemistry metric."],
+      ["Standard Deviation", "s = sqrt(sum(x - mean)^2 / (n - 1))", "Precision estimate for replicate measurements."]
+    ];
+
+    const deepDives = [
+      {
+        id: "benzene",
+        title: "Benzene Aromatic System",
+        domain: "Organic",
+        summary: "Aromatic stabilization arises from six delocalized pi electrons in a planar cyclic system.",
+        steps: [
+          ["Pi cloud", "Each carbon contributes one p orbital to a continuous cyclic pi system."],
+          ["Huckel rule", "Benzene satisfies 4n + 2 pi electrons with n = 1."],
+          ["Mechanistic consequence", "Substitution is favored over addition because aromaticity is restored."]
+        ],
+        svg: "benzene"
+      },
+      {
+        id: "sn2",
+        title: "SN2 Backside Attack",
+        domain: "Organic",
+        summary: "A concerted nucleophilic substitution with inversion of configuration and second-order kinetics.",
+        steps: [
+          ["Approach", "The nucleophile attacks the sigma-star orbital opposite the leaving group."],
+          ["Transition state", "Bond formation and bond cleavage occur simultaneously."],
+          ["Stereochemistry", "The product forms with Walden inversion at the reacting center."]
+        ],
+        svg: "sn2"
+      },
+      {
+        id: "octahedral",
+        title: "Octahedral d-Orbital Splitting",
+        domain: "Inorganic",
+        summary: "Ligands split metal d orbitals into lower t2g and higher eg sets.",
+        steps: [
+          ["Ligand field", "Electron repulsion raises orbitals pointing directly at ligands."],
+          ["Spin state", "Delta-o and pairing energy determine high-spin or low-spin occupancy."],
+          ["Color", "d-d transitions absorb selected wavelengths, giving complex ion color."]
+        ],
+        svg: "octahedral"
+      },
+      {
+        id: "titration",
+        title: "Weak Acid Titration Curve",
+        domain: "Analytical",
+        summary: "The curve reveals buffer region, half-equivalence point, equivalence point, and indicator choice.",
+        steps: [
+          ["Initial region", "pH is governed by weak acid dissociation."],
+          ["Half-equivalence", "pH equals pKa when acid and conjugate base are equal."],
+          ["Equivalence", "The conjugate base hydrolyzes, so pH is above 7."]
+        ],
+        svg: "titration"
+      },
+      {
+        id: "electrochem",
+        title: "Galvanic Cell and Nernst Control",
+        domain: "Physical",
+        summary: "Cell voltage responds to standard potential, electron count, temperature, and reaction quotient.",
+        steps: [
+          ["Anode", "Oxidation releases electrons into the external circuit."],
+          ["Cathode", "Reduction consumes electrons and drives product formation."],
+          ["Nernst shift", "Changing ion concentrations changes Q and therefore the measured potential."]
+        ],
+        svg: "electrochem"
+      },
+      {
+        id: "chromatography",
+        title: "HPLC Peak Resolution",
+        domain: "Analytical",
+        summary: "Resolution improves by changing selectivity, retention, efficiency, or peak width.",
+        steps: [
+          ["Retention", "Compounds separate because they partition differently between phases."],
+          ["Efficiency", "Narrower peaks produce stronger resolution for the same retention gap."],
+          ["Validation", "Resolution, tailing factor, linearity, and precision support analytical confidence."]
+        ],
+        svg: "chromatography"
+      },
+      {
+        id: "mo",
+        title: "Molecular Orbital Diagram",
+        domain: "Physical",
+        summary: "Atomic orbitals combine into bonding and antibonding molecular orbitals that explain bond order.",
+        steps: [
+          ["Combination", "In-phase overlap lowers energy and out-of-phase overlap raises energy."],
+          ["Filling", "Electrons occupy orbitals by Aufbau, Pauli, and Hund rules."],
+          ["Prediction", "Bond order links orbital occupancy to bond strength and magnetism."]
+        ],
+        svg: "mo"
+      },
+      {
+        id: "buffer",
+        title: "Buffer Capacity Map",
+        domain: "Analytical",
+        summary: "A useful buffer is strongest near pH equals pKa and weakens outside the effective range.",
+        steps: [
+          ["Pair choice", "Select an acid-base pair with pKa close to the target pH."],
+          ["Ratio", "Use Henderson-Hasselbalch to set conjugate base to acid ratio."],
+          ["Capacity", "Increase total concentration when the sample will add acid or base load."]
+        ],
+        svg: "buffer"
+      }
+    ];
+
+    function titleCase(text) {
+      return text.replace(/\w\S*/g, word => word[0].toUpperCase() + word.slice(1));
+    }
+
+    function buildTopics() {
+      const topics = [];
+      Object.entries(domainBlueprints).forEach(([domain, config]) => {
+        config.themes.forEach((theme, themeIndex) => {
+          config.skills.forEach((skill, skillIndex) => {
+            const level = skillIndex > 8 || /advanced|research|field|quantum|organometallic|validation/i.test(theme + skill)
+              ? "Research"
+              : skillIndex > 4 ? "Advanced" : "Core";
+            topics.push({
+              id: `${domain}-${themeIndex}-${skillIndex}`,
+              domain,
+              title: titleCase(`${theme} ${skill}`),
+              level,
+              summary: `${titleCase(skill)} study module for ${theme}, including theory, representative examples, BS-level problem framing, and revision checkpoints.`,
+              keywords: `${domain} ${theme} ${skill} ${level}`.toLowerCase()
+            });
+          });
+        });
+      });
+      formulaLibrary.forEach(([title, equation, summary], index) => {
+        topics.push({
+          id: `Formula-${index}`,
+          domain: "Formulas",
+          title,
+          level: index > 5 ? "Advanced" : "Core",
+          summary: `${summary} Equation: ${equation}`,
+          keywords: `formulas numerical ${title} ${equation} ${summary}`.toLowerCase()
+        });
+      });
+      return topics;
+    }
+
+    const topics = buildTopics();
+    let activeDomain = "All";
+    let searchTerm = "";
+    let renderedLimit = 72;
+    let currentQuestion = null;
+    let quiz = { score: 0, asked: 0, correct: 0, streak: 0, started: 0, timer: null, difficulty: "Core" };
+
+    const $ = id => document.getElementById(id);
+    const screens = [...document.querySelectorAll(".screen")];
+    const navButtons = [...document.querySelectorAll(".nav button")];
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+    }
+
+    function setScreen(id) {
+      screens.forEach(screen => screen.classList.toggle("active", screen.id === id));
+      navButtons.forEach(button => button.classList.toggle("active", button.dataset.screen === id));
+      const titles = {
+        dashboard: "Professional Chemistry Learning Suite",
+        chat: "Offline Chemistry Tutor Chatbot",
+        topics: "Topic Atlas",
+        deep: "Deep-Dive Study Mode",
+        quiz: "Gamified Quiz Arena",
+        formulas: "Numerical Formula Lab",
+        tools: "Offline Scientific Tools"
+      };
+      $("screenTitle").textContent = titles[id] || titles.dashboard;
+      if (id === "topics") renderTopics();
+      if (id === "deep") renderDeepDive($("deepSelect").value || deepDives[0].id);
+      if (id === "quiz" && !currentQuestion) newQuestion();
+    }
+
+    function filteredTopics() {
+      const q = searchTerm.toLowerCase().trim();
+      return topics.filter(topic => {
+        const domainOk = activeDomain === "All" || topic.domain === activeDomain;
+        const textOk = !q || topic.keywords.includes(q) || topic.title.toLowerCase().includes(q) || topic.summary.toLowerCase().includes(q);
+        return domainOk && textOk;
+      });
+    }
+
+    function findTopic(query) {
+      const q = query.toLowerCase().trim();
+      if (!q) return null;
+      return topics.find(topic => topic.title.toLowerCase() === q)
+        || topics.find(topic => topic.title.toLowerCase().includes(q) || q.includes(topic.title.toLowerCase()))
+        || topics.find(topic => topic.keywords.split(" ").some(word => word.length > 4 && q.includes(word)));
+    }
+
+    function findElement(query) {
+      const q = query.toLowerCase().trim();
+      const atomicMatch = q.match(/atomic\s+number\s+(\d+)/i) || q.match(/^#?(\d{1,3})$/);
+      if (atomicMatch) return elements.find(element => element.number === Number(atomicMatch[1]));
+      return elements.find(element => element.symbol.toLowerCase() === q || element.name.toLowerCase() === q)
+        || elements.find(element => q.includes(element.name.toLowerCase()) || q.includes(element.symbol.toLowerCase()));
+    }
+
+    function renderDashboard() {
+      const domains = ["Organic", "Inorganic", "Physical", "Analytical", "Formulas"];
+      $("categoryDashboard").innerHTML = domains.map(domain => {
+        const count = topics.filter(topic => topic.domain === domain).length;
+        return `<button class="category-card" style="--cat:${COLORS[domain]}" data-domain-card="${domain}">
+          <div class="code">${domain.slice(0, 2).toUpperCase()}</div>
+          <h3>${domain}</h3>
+          <p>${count} indexed modules with BS-level theory, problems, and recall hooks.</p>
+        </button>`;
+      }).join("");
+      $("metricTopics").textContent = topics.length.toLocaleString();
+      $("sideTopicCount").textContent = topics.length.toLocaleString();
+      $("metricDifficulty").textContent = quiz.difficulty;
+    }
+
+    function renderTopics() {
+      const list = filteredTopics();
+      const visibleCount = Math.min(list.length, renderedLimit);
+      $("shownCount").textContent = visibleCount.toLocaleString();
+      $("searchStatus").textContent = searchTerm
+        ? `${list.length.toLocaleString()} matches for "${searchTerm}" in ${activeDomain}.`
+        : `Browsing ${list.length.toLocaleString()} modules in ${activeDomain}.`;
+      $("topicGrid").innerHTML = list.slice(0, renderedLimit).map(topic => `
+        <article class="topic-card" style="--topic-color:${COLORS[topic.domain]}">
+          <div class="topic-meta"><span>${escapeHtml(topic.domain)}</span><span class="level">${escapeHtml(topic.level)}</span></div>
+          <h3>${escapeHtml(topic.title)}</h3>
+          <p>${escapeHtml(topic.summary)}</p>
+          <button class="action" data-study="${topic.id}">Open Deep Study</button>
+        </article>
+      `).join("") || `<p>No matching topics. Try a broader query.</p>`;
+      const loadButton = $("loadMoreTopics");
+      if (loadButton) {
+        loadButton.hidden = list.length <= renderedLimit;
+        loadButton.textContent = list.length > renderedLimit ? `Load More Topics (${visibleCount}/${list.length})` : "All Topics Loaded";
+      }
+    }
+
+    function renderFormulas() {
+      $("formulaBoard").innerHTML = formulaLibrary.map(([title, equation, summary]) => `
+        <article class="formula-card">
+          <h3>${escapeHtml(title)}</h3>
+          <code>${escapeHtml(equation)}</code>
+          <p>${escapeHtml(summary)}</p>
+          <button class="action" data-formula-use="${escapeHtml(title)}">Use Formula</button>
+        </article>
+      `).join("");
+    }
+
+    function renderDeepOptions() {
+      $("deepSelect").innerHTML = deepDives.map(item => `<option value="${item.id}">${item.title}</option>`).join("");
+    }
+
+    function renderDeepDive(id) {
+      const item = deepDives.find(d => d.id === id) || deepDives[0];
+      $("deepTitle").textContent = item.title;
+      $("deepSummary").textContent = item.summary;
+      $("mechanismSteps").innerHTML = item.steps.map(([label, text], index) => `
+        <div class="step"><strong>${index + 1}. ${escapeHtml(label)}</strong><p>${escapeHtml(text)}</p></div>
+      `).join("");
+      $("structureViewer").innerHTML = structureSvg(item.svg);
+    }
+
+    function structureSvg(type) {
+      if (type === "sn2") return `<svg class="structure-svg" viewBox="0 0 760 460" role="img" aria-label="SN2 mechanism">
+        <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#22d3ee"/></marker></defs>
+        <line class="bond hot" x1="170" y1="230" x2="335" y2="230" marker-end="url(#arrow)"/>
+        <line class="bond" x1="380" y1="230" x2="500" y2="170"/>
+        <line class="bond" x1="380" y1="230" x2="500" y2="290"/>
+        <line class="bond hot" x1="380" y1="230" x2="565" y2="230" marker-end="url(#arrow)"/>
+        ${atom(105,230,"Nu","#34d399")}${atom(380,230,"C","#f8fafc")}${atom(535,170,"H","#e2e8f0")}${atom(535,290,"H","#e2e8f0")}${atom(635,230,"Br","#fb923c")}
+        <text x="380" y="390" fill="#cbd5e1" font-family="monospace" font-size="24" text-anchor="middle">Backside attack: Nu- + R-Br -> R-Nu + Br-</text>
+      </svg>`;
+      if (type === "octahedral") return `<svg class="structure-svg" viewBox="0 0 760 460" role="img" aria-label="Octahedral complex">
+        <line class="bond" x1="380" y1="230" x2="220" y2="230"/><line class="bond" x1="380" y1="230" x2="540" y2="230"/>
+        <line class="bond" x1="380" y1="230" x2="380" y2="70"/><line class="bond" x1="380" y1="230" x2="380" y2="390"/>
+        <line class="bond hot" x1="380" y1="230" x2="275" y2="125"/><line class="bond hot" x1="380" y1="230" x2="485" y2="335"/>
+        ${atom(380,230,"M","#a78bfa")}${atom(205,230,"L","#38bdf8")}${atom(555,230,"L","#38bdf8")}${atom(380,55,"L","#38bdf8")}${atom(380,405,"L","#38bdf8")}${atom(260,110,"L","#38bdf8")}${atom(500,350,"L","#38bdf8")}
+        <text x="380" y="438" fill="#cbd5e1" font-family="monospace" font-size="22" text-anchor="middle">Octahedral ML6 field: t2g lower, eg higher</text>
+      </svg>`;
+      if (type === "titration") return `<svg class="structure-svg" viewBox="0 0 760 460" role="img" aria-label="Weak acid titration curve">
+        <path d="M110 370 C180 330, 230 300, 290 250 S390 190, 410 88 S465 65, 640 58" fill="none" stroke="#22d3ee" stroke-width="5"/>
+        <line x1="100" y1="390" x2="660" y2="390" stroke="#94a3b8" stroke-width="3"/><line x1="100" y1="390" x2="100" y2="50" stroke="#94a3b8" stroke-width="3"/>
+        <line x1="310" y1="390" x2="310" y2="230" stroke="#facc15" stroke-width="2" stroke-dasharray="7 7"/>
+        <line x1="410" y1="390" x2="410" y2="88" stroke="#f472b6" stroke-width="2" stroke-dasharray="7 7"/>
+        <text x="310" y="420" fill="#facc15" font-family="monospace" font-size="18" text-anchor="middle">1/2 eq: pH=pKa</text>
+        <text x="410" y="40" fill="#f472b6" font-family="monospace" font-size="18" text-anchor="middle">equivalence</text>
+        <text x="52" y="70" fill="#cbd5e1" font-family="monospace" font-size="18">pH</text><text x="560" y="428" fill="#cbd5e1" font-family="monospace" font-size="18">V base</text>
+      </svg>`;
+      if (type === "electrochem") return `<svg class="structure-svg" viewBox="0 0 760 460" role="img" aria-label="Galvanic cell">
+        <rect x="110" y="140" width="170" height="220" rx="8" fill="rgba(56,189,248,.12)" stroke="#38bdf8" stroke-width="3"/>
+        <rect x="480" y="140" width="170" height="220" rx="8" fill="rgba(244,114,182,.12)" stroke="#f472b6" stroke-width="3"/>
+        <line class="bond hot" x1="195" y1="105" x2="565" y2="105"/><path d="M550 94 L570 105 L550 116" fill="none" stroke="#22d3ee" stroke-width="4"/>
+        <line x1="195" y1="110" x2="195" y2="310" stroke="#94a3b8" stroke-width="8"/><line x1="565" y1="110" x2="565" y2="310" stroke="#94a3b8" stroke-width="8"/>
+        <path d="M280 250 C350 195, 410 305, 480 250" fill="none" stroke="#facc15" stroke-width="8" stroke-linecap="round"/>
+        <text x="195" y="392" fill="#0f172a" font-family="monospace" font-size="22" text-anchor="middle">Anode: oxidation</text>
+        <text x="565" y="392" fill="#0f172a" font-family="monospace" font-size="22" text-anchor="middle">Cathode: reduction</text>
+        <text x="380" y="65" fill="#0891b2" font-family="monospace" font-size="24" text-anchor="middle">e- flow and salt bridge balance charge</text>
+      </svg>`;
+      if (type === "chromatography") return `<svg class="structure-svg" viewBox="0 0 760 460" role="img" aria-label="Chromatography peaks">
+        <line x1="90" y1="370" x2="680" y2="370" stroke="#94a3b8" stroke-width="3"/><line x1="90" y1="370" x2="90" y2="60" stroke="#94a3b8" stroke-width="3"/>
+        <path d="M120 370 C180 365, 205 120, 250 370" fill="rgba(56,189,248,.22)" stroke="#38bdf8" stroke-width="4"/>
+        <path d="M300 370 C370 360, 415 80, 500 370" fill="rgba(244,114,182,.22)" stroke="#f472b6" stroke-width="4"/>
+        <line x1="250" y1="384" x2="420" y2="384" stroke="#facc15" stroke-width="4"/><text x="335" y="420" fill="#ca8a04" font-family="monospace" font-size="22" text-anchor="middle">Resolution window</text>
+        <text x="92" y="44" fill="#0f172a" font-family="monospace" font-size="18">signal</text><text x="610" y="405" fill="#0f172a" font-family="monospace" font-size="18">time</text>
+      </svg>`;
+      if (type === "mo") return `<svg class="structure-svg" viewBox="0 0 760 460" role="img" aria-label="Molecular orbital diagram">
+        <line x1="130" y1="320" x2="270" y2="320" stroke="#94a3b8" stroke-width="4"/><line x1="490" y1="320" x2="630" y2="320" stroke="#94a3b8" stroke-width="4"/>
+        <line x1="310" y1="240" x2="450" y2="240" stroke="#22d3ee" stroke-width="5"/><line x1="310" y1="120" x2="450" y2="120" stroke="#fb7185" stroke-width="5"/>
+        <path d="M270 320 C310 300, 330 260, 310 240 M490 320 C450 300, 430 260, 450 240" fill="none" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="7 8"/>
+        <path d="M270 320 C330 250, 360 160, 310 120 M490 320 C430 250, 400 160, 450 120" fill="none" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="7 8"/>
+        <text x="380" y="230" fill="#0891b2" font-family="monospace" font-size="20" text-anchor="middle">bonding sigma</text><text x="380" y="105" fill="#e11d48" font-family="monospace" font-size="20" text-anchor="middle">antibonding sigma*</text>
+        <text x="200" y="350" fill="#0f172a" font-family="monospace" font-size="20" text-anchor="middle">AO</text><text x="560" y="350" fill="#0f172a" font-family="monospace" font-size="20" text-anchor="middle">AO</text>
+      </svg>`;
+      if (type === "buffer") return `<svg class="structure-svg" viewBox="0 0 760 460" role="img" aria-label="Buffer capacity map">
+        <line x1="100" y1="370" x2="660" y2="370" stroke="#94a3b8" stroke-width="3"/><line x1="100" y1="370" x2="100" y2="70" stroke="#94a3b8" stroke-width="3"/>
+        <path d="M110 330 C220 285, 280 130, 380 115 C480 130, 540 285, 650 330" fill="none" stroke="#34d399" stroke-width="6"/>
+        <line x1="380" y1="370" x2="380" y2="112" stroke="#facc15" stroke-width="3" stroke-dasharray="7 8"/>
+        <text x="380" y="408" fill="#ca8a04" font-family="monospace" font-size="22" text-anchor="middle">pH = pKa</text>
+        <text x="365" y="88" fill="#059669" font-family="monospace" font-size="22" text-anchor="middle">maximum capacity</text>
+      </svg>`;
+      return `<svg class="structure-svg" viewBox="0 0 760 460" role="img" aria-label="Benzene structure">
+        <polygon points="380,95 500,165 500,305 380,375 260,305 260,165" fill="none" stroke="#cbd5e1" stroke-width="5"/>
+        <circle cx="380" cy="235" r="92" fill="none" stroke="#22d3ee" stroke-width="4" stroke-dasharray="10 8"/>
+        <line class="bond hot" x1="380" y1="95" x2="500" y2="165"/><line class="bond hot" x1="500" y1="305" x2="380" y2="375"/><line class="bond hot" x1="260" y1="305" x2="260" y2="165"/>
+        ${atom(380,95,"C","#f8fafc")}${atom(500,165,"C","#f8fafc")}${atom(500,305,"C","#f8fafc")}${atom(380,375,"C","#f8fafc")}${atom(260,305,"C","#f8fafc")}${atom(260,165,"C","#f8fafc")}
+        <text x="380" y="435" fill="#cbd5e1" font-family="monospace" font-size="22" text-anchor="middle">Delocalized aromatic pi system</text>
+      </svg>`;
+    }
+
+    function atom(x, y, label, color) {
+      return `<g class="atom" style="color:${color}"><circle cx="${x}" cy="${y}" r="25" fill="${color}" stroke="${color}"/><text x="${x}" y="${y + 1}">${label}</text></g>`;
+    }
+
+    function animateMechanism() {
+      $("structureViewer").animate(
+        [{ filter: "brightness(1)" }, { filter: "brightness(1.42) drop-shadow(0 0 22px rgba(34,211,238,.5))" }, { filter: "brightness(1)" }],
+        { duration: 780, iterations: 1 }
+      );
+    }
+
+    function normalizeFormula(formula) {
+      const subscriptMap = { "₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4", "₅": "5", "₆": "6", "₇": "7", "₈": "8", "₉": "9" };
+      return formula
+        .replace(/[₀₁₂₃₄₅₆₇₈₉]/g, digit => subscriptMap[digit])
+        .replace(/[\[\{]/g, "(")
+        .replace(/[\]\}]/g, ")")
+        .replace(/[·.]/g, "")
+        .replace(/\s+/g, "");
+    }
+
+    function parseFormula(input) {
+      const formula = normalizeFormula(input.trim());
+      if (!formula || !/^[A-Za-z0-9()]+$/.test(formula)) throw new Error("Invalid formula");
+      let i = 0;
+      function readNumber() {
+        const start = i;
+        while (/\d/.test(formula[i])) i++;
+        return start === i ? 1 : Number(formula.slice(start, i));
+      }
+      function merge(target, source, mult) {
+        Object.entries(source).forEach(([symbol, count]) => target[symbol] = (target[symbol] || 0) + count * mult);
+      }
+      function group() {
+        const counts = {};
+        while (i < formula.length) {
+          const char = formula[i];
+          if (char === "(") {
+            i++;
+            const inner = group();
+            if (formula[i] !== ")") throw new Error("Missing closing parenthesis");
+            i++;
+            merge(counts, inner, readNumber());
+          } else if (char === ")") {
+            return counts;
+          } else if (/[A-Z]/.test(char)) {
+            let symbol = formula[i++];
+            if (/[a-z]/.test(formula[i])) symbol += formula[i++];
+            if (!bySymbol.has(symbol)) throw new Error(`Unknown element: ${symbol}`);
+            counts[symbol] = (counts[symbol] || 0) + readNumber();
+          } else {
+            throw new Error("Unexpected character");
+          }
+        }
+        return counts;
+      }
+      const counts = group();
+      if (i !== formula.length) throw new Error("Could not finish parsing");
+      const parts = Object.entries(counts).map(([symbol, count]) => ({ symbol, count, mass: bySymbol.get(symbol).mass * count }));
+      return { formula, parts, total: parts.reduce((sum, part) => sum + part.mass, 0) };
+    }
+
+    function calculateMass() {
+      try {
+        const parsed = parseFormula($("formulaInput").value);
+        $("formulaResult").textContent = `${parsed.formula}\nMolar mass: ${parsed.total.toFixed(4)} g/mol\n\nBreakdown:\n` +
+          parsed.parts.map(part => `${part.symbol}: ${part.count} x ${bySymbol.get(part.symbol).mass} = ${part.mass.toFixed(4)}`).join("\n");
+      } catch (error) {
+        $("formulaResult").textContent = `Formula error: ${error.message}`;
+      }
+    }
+
+    function appendChat(role, html) {
+      const row = document.createElement("div");
+      row.className = `chat-row ${role}`;
+      row.innerHTML = role === "bot"
+        ? `<div class="chat-avatar">AI</div><article class="chat-bubble">${html}</article>`
+        : `<article class="chat-bubble">${escapeHtml(html)}</article>`;
+      $("chatMessages").appendChild(row);
+      $("chatMessages").scrollTop = $("chatMessages").scrollHeight;
+    }
+
+    function chatbotAnswer(question) {
+      const q = question.toLowerCase().trim();
+      const deep = deepDives.find(item => q.includes(item.id) || q.includes(item.title.toLowerCase().split(" ")[0]));
+      if (deep && /show|deep|mechanism|structure|benzene|sn2|octahedral|titration/.test(q)) {
+        $("deepSelect").value = deep.id;
+        renderDeepDive(deep.id);
+        return `<h3>${escapeHtml(deep.title)}</h3>
+          <p>${escapeHtml(deep.summary)}</p>
+          <ul>${deep.steps.map(([label, text]) => `<li><strong>${escapeHtml(label)}:</strong> ${escapeHtml(text)}</li>`).join("")}</ul>
+          <p>Open <strong>Deep-Dive Mode</strong> to view the visual mechanism.</p>`;
+      }
+
+      const element = findElement(q);
+      if (element) {
+        return `<h3>${element.name} (${element.symbol})</h3>
+          <ul>
+            <li><strong>Atomic number:</strong> ${element.number}</li>
+            <li><strong>Atomic mass:</strong> ${element.mass} g/mol</li>
+            <li><strong>Classification:</strong> ${element.category}</li>
+            <li><strong>BS-level note:</strong> connect its electron configuration and periodic group to reactivity, bonding, and analytical identification.</li>
+          </ul>`;
+      }
+
+      const formulaMatch = q.match(/(?:molar mass of|calculate|formula)\s+([A-Za-z0-9()]+)/i) || q.match(/\b([A-Z][a-z]?\d*(?:\([A-Za-z0-9]+\)\d*|[A-Z][a-z]?\d*)+)\b/);
+      if (formulaMatch) {
+        try {
+          const parsed = parseFormula(formulaMatch[1]);
+          return `<h3>${escapeHtml(parsed.formula)}</h3>
+            <p><strong>Molar mass:</strong> ${parsed.total.toFixed(4)} g/mol</p>
+            <ul>${parsed.parts.map(part => `<li>${part.symbol}: ${part.count} x ${bySymbol.get(part.symbol).mass} = ${part.mass.toFixed(4)}</li>`).join("")}</ul>`;
+        } catch (error) {
+          return `<h3>Formula parsing issue</h3><p>${escapeHtml(error.message)}. Try a standard formula such as H2SO4, Ca(OH)2, or Al2(SO4)3.</p>`;
+        }
+      }
+
+      const formulaTopic = formulaLibrary.find(([title, equation]) => q.includes(title.toLowerCase()) || q.includes(equation.toLowerCase().split(" ")[0]));
+      if (formulaTopic) {
+        return `<h3>${escapeHtml(formulaTopic[0])}</h3>
+          <p><strong>Equation:</strong> <span class="mono">${escapeHtml(formulaTopic[1])}</span></p>
+          <p>${escapeHtml(formulaTopic[2])}</p>`;
+      }
+
+      const topic = findTopic(q);
+      if (topic) {
+        return `<h3>${escapeHtml(topic.title)}</h3>
+          <p><strong>Domain:</strong> ${escapeHtml(topic.domain)} | <strong>Level:</strong> ${escapeHtml(topic.level)}</p>
+          <p>${escapeHtml(topic.summary)}</p>
+          <ul>
+            <li>Start with the definition and governing principle.</li>
+            <li>Work one symbolic example before numerical substitution.</li>
+            <li>Use Quiz Mode to test recall from this domain.</li>
+          </ul>`;
+      }
+
+      if (/quiz|practice|test/.test(q)) {
+        return `<h3>Practice Plan</h3>
+          <p>Use Gamified Quiz with a domain filter and difficulty level. For BS-level revision, start at Advanced, then move to Research after 70% accuracy.</p>`;
+      }
+
+      return `<h3>I can help offline.</h3>
+        <p>Ask about an element, formula, topic, mechanism, or numerical equation. Examples: <strong>SN2 mechanism</strong>, <strong>atomic number 26</strong>, <strong>molar mass of H2SO4</strong>, or <strong>pH weak acid</strong>.</p>`;
+    }
+
+    function submitChat(value) {
+      const question = value.trim();
+      if (!question) return;
+      appendChat("user", question);
+      appendChat("bot", chatbotAnswer(question));
+    }
+
+    function newQuestion() {
+      if (!quiz.started) startQuizTimer();
+      quiz.difficulty = $("quizDifficulty").value;
+      const domain = $("quizDomain").value;
+      const pool = topics.filter(t => (domain === "All" || t.domain === domain) && (quiz.difficulty === "Core" || t.level === quiz.difficulty || t.level === "Research"));
+      const topic = pool[Math.floor(Math.random() * pool.length)] || topics[0];
+      const typeRoll = Math.random();
+      let prompt, answer, options, explanation;
+      if (typeRoll < .34) {
+        prompt = `Which domain best classifies "${topic.title}"?`;
+        answer = topic.domain;
+        options = ["Organic", "Inorganic", "Physical", "Analytical", "Formulas"];
+        explanation = `${topic.title} is indexed under ${topic.domain}.`;
+      } else if (typeRoll < .68) {
+        prompt = `Which module matches this BS-level objective: ${topic.summary}`;
+        answer = topic.title;
+        options = pool.map(t => t.title);
+        explanation = `The objective describes ${topic.title}.`;
+      } else {
+        const element = elements[Math.floor(Math.random() * elements.length)];
+        prompt = quiz.difficulty === "Research"
+          ? `Identify the periodic classification of ${element.name} (${element.symbol}).`
+          : `What is the atomic number of ${element.name}?`;
+        answer = quiz.difficulty === "Research" ? element.category : String(element.number);
+        options = quiz.difficulty === "Research" ? [...new Set(elements.map(e => e.category))] : elements.map(e => String(e.number));
+        explanation = `${element.name} is ${element.symbol}, atomic number ${element.number}, classified as ${element.category}.`;
+      }
+      const choices = [...new Set([answer, ...shuffle(options.filter(o => o !== answer)).slice(0, 3)])].slice(0, 4);
+      currentQuestion = { answer, explanation, topic };
+      $("questionMeta").textContent = `${topic.domain} / ${quiz.difficulty}`;
+      $("questionText").textContent = prompt;
+      $("quizOptions").innerHTML = shuffle(choices).map(choice => `<button class="quiz-option">${escapeHtml(choice)}</button>`).join("");
+      $("quizFeedback").textContent = "Select an answer. Timer and streak are active.";
+      $("metricDifficulty").textContent = quiz.difficulty;
+    }
+
+    function answerQuiz(selected, button) {
+      if (!currentQuestion || button.disabled) return;
+      const correct = selected === currentQuestion.answer;
+      quiz.asked++;
+      if (correct) quiz.correct++;
+      quiz.score += correct ? ({ Core: 10, Advanced: 15, Research: 22 }[quiz.difficulty] || 10) : 0;
+      quiz.streak = correct ? quiz.streak + 1 : 0;
+      [...document.querySelectorAll(".quiz-option")].forEach(option => {
+        option.disabled = true;
+        if (option.textContent === currentQuestion.answer) option.classList.add("correct");
+      });
+      if (!correct) button.classList.add("wrong");
+      $("quizFeedback").textContent = `${correct ? "Correct." : "Incorrect."} ${currentQuestion.explanation}`;
+      updateQuizMetrics();
+    }
+
+    function updateQuizMetrics() {
+      $("quizScore").textContent = quiz.score;
+      $("quizAsked").textContent = quiz.asked;
+      $("quizStreak").textContent = quiz.streak;
+      $("sideScore").textContent = quiz.score;
+      $("sideStreak").textContent = quiz.streak;
+      $("quizProgress").style.width = `${Math.min(100, quiz.asked * 5)}%`;
+      $("metricAccuracy").textContent = quiz.asked ? `${Math.round((quiz.correct / quiz.asked) * 100)}%` : "0%";
+    }
+
+    function startQuizTimer() {
+      quiz.started = Date.now();
+      quiz.timer = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - quiz.started) / 1000);
+        const text = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
+        $("quizTimer").textContent = text;
+        $("sideTime").textContent = text;
+      }, 1000);
+    }
+
+    function shuffle(items) {
+      return [...items].sort(() => Math.random() - .5);
+    }
+
+    function renderTools(tool) {
+      const copy = {
+        molarity: "Molarity Workflow\n1. Convert solute mass to moles: n = m / Mr.\n2. Convert solution volume to liters.\n3. Calculate M = n / V.\n4. For dilutions, use M1V1 = M2V2 before final concentration checks.\n5. Report mol L^-1 with significant figures.",
+        ph: "pH Reference\nStrong acid: pH = -log C.\nWeak acid approximation: [H+] = sqrt(Ka C).\nBuffer: pH = pKa + log(A- / HA).\nPolyprotic acids: decide whether later Ka values are negligible.",
+        gas: "Gas Law Console\nPV = nRT.\nUse kelvin for temperature, consistent pressure units, and R matching pressure-volume units.\nReal gases: inspect van der Waals correction when pressure is high or temperature is low.",
+        redox: "Redox Balancer Guide\nAssign oxidation numbers, split half reactions, balance atoms, balance charge with electrons, scale, combine, and verify net atoms and charge.",
+        ksp: "Ksp Predictor\n1. Write the dissolution equation.\n2. Build Qsp from ion concentrations and stoichiometric exponents.\n3. If Qsp > Ksp, precipitation is expected.\n4. Use common ions to reduce solubility.",
+        buffer: "Buffer Designer\n1. Choose pKa within about 1 pH unit of target.\n2. Use pH = pKa + log(base/acid).\n3. Convert ratio into moles or volumes.\n4. Check total concentration for capacity.",
+        chromatography: "Chromatography QA\nTrack tR, peak width, resolution, tailing factor, calibration R^2, blank response, and replicate RSD. Improve resolution through selectivity, efficiency, or retention.",
+        spectroscopy: "Spectral ID\nIR: functional group bands. 1H NMR: integration, splitting, shift. 13C NMR: carbon environment count. UV-Vis: conjugation and ligand-field transitions."
+      };
+      document.querySelectorAll("[data-tool]").forEach(button => button.classList.toggle("active", button.dataset.tool === tool));
+      $("toolOutput").textContent = copy[tool] || "Choose a tool to view its offline workflow.";
+    }
+
+    function loadMoreTopics() {
+      renderedLimit += 72;
+      renderTopics();
+    }
+
+    function resetQuiz() {
+      quiz.score = 0;
+      quiz.asked = 0;
+      quiz.correct = 0;
+      quiz.streak = 0;
+      currentQuestion = null;
+      updateQuizMetrics();
+      $("questionMeta").textContent = "Ready";
+      $("questionText").textContent = "Press New Question to begin.";
+      $("quizOptions").innerHTML = "";
+      $("quizFeedback").textContent = "Score reset. Press New Question to train again.";
+    }
+
+    function useFormula(title) {
+      const item = formulaLibrary.find(([name]) => name === title);
+      if (!item) return;
+      $("formulaResult").textContent = `${item[0]}\nEquation: ${item[1]}\nUse: ${item[2]}\n\nTip: enter a compound formula above when you need molar mass from the periodic table.`;
+    }
+
+    function attachEvents() {
+      navButtons.forEach(button => button.addEventListener("click", () => setScreen(button.dataset.screen)));
+      $("globalSearch").addEventListener("input", event => {
+        searchTerm = event.target.value;
+        setScreen("topics");
+        renderTopics();
+      });
+      $("globalCategory").addEventListener("change", event => {
+        activeDomain = event.target.value;
+        document.querySelectorAll(".pill[data-filter]").forEach(pill => pill.classList.toggle("active", pill.dataset.filter === activeDomain));
+        setScreen("topics");
+        renderTopics();
+      });
+      $("chatForm").addEventListener("submit", event => {
+        event.preventDefault();
+        const input = $("chatInput");
+        submitChat(input.value);
+        input.value = "";
+      });
+      document.querySelectorAll("[data-chat-prompt]").forEach(button => button.addEventListener("click", () => {
+        setScreen("chat");
+        submitChat(button.dataset.chatPrompt);
+      }));
+      $("categoryDashboard").addEventListener("click", event => {
+        const card = event.target.closest("[data-domain-card]");
+        if (!card) return;
+        activeDomain = card.dataset.domainCard;
+        $("globalCategory").value = activeDomain;
+        setScreen("topics");
+      });
+      document.querySelectorAll(".pill[data-filter]").forEach(pill => pill.addEventListener("click", () => {
+        activeDomain = pill.dataset.filter;
+        $("globalCategory").value = activeDomain;
+        document.querySelectorAll(".pill[data-filter]").forEach(p => p.classList.toggle("active", p === pill));
+        renderTopics();
+      }));
+      $("topicGrid").addEventListener("click", event => {
+        const button = event.target.closest("[data-study]");
+        if (!button) return;
+        const topic = topics.find(t => t.id === button.dataset.study);
+        const match = deepDives.find(d => d.domain === topic.domain) || deepDives[0];
+        $("deepSelect").value = match.id;
+        setScreen("deep");
+        renderDeepDive(match.id);
+      });
+      $("deepSelect").addEventListener("change", event => renderDeepDive(event.target.value));
+      $("animateMechanism").addEventListener("click", animateMechanism);
+      $("newQuestion").addEventListener("click", newQuestion);
+      $("resetQuiz").addEventListener("click", resetQuiz);
+      $("loadMoreTopics").addEventListener("click", loadMoreTopics);
+      $("quizDifficulty").addEventListener("change", () => { quiz.difficulty = $("quizDifficulty").value; $("metricDifficulty").textContent = quiz.difficulty; });
+      $("quizOptions").addEventListener("click", event => {
+        const button = event.target.closest(".quiz-option");
+        if (button) answerQuiz(button.textContent, button);
+      });
+      $("calcMass").addEventListener("click", calculateMass);
+      $("formulaInput").addEventListener("keydown", event => { if (event.key === "Enter") calculateMass(); });
+      document.querySelectorAll("[data-formula-sample]").forEach(button => button.addEventListener("click", () => {
+        $("formulaInput").value = button.dataset.formulaSample;
+        calculateMass();
+      }));
+      $("formulaBoard").addEventListener("click", event => {
+        const button = event.target.closest("[data-formula-use]");
+        if (button) useFormula(button.dataset.formulaUse);
+      });
+      document.querySelectorAll("[data-tool]").forEach(button => button.addEventListener("click", () => renderTools(button.dataset.tool)));
+    }
+
+    function init() {
+      renderDashboard();
+      renderTopics();
+      renderFormulas();
+      renderDeepOptions();
+      renderDeepDive(deepDives[0].id);
+      attachEvents();
+      appendChat("bot", `<h3>Welcome to Tutor Chat</h3><p>I am fully offline and connected to the embedded BS Chemistry topic atlas, formula calculator, element table, and deep-dive mechanisms. Ask me a chemistry question to begin.</p>`);
+    }
+
+    init();
+  </script>
+</body>
+</html>
